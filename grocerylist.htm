@@ -262,7 +262,7 @@ function run (code, input){
 				stack.unshift(stack.pop());
 			},
 			"v": function(){ 
-				 var newLetter = line.replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase();
+				 var newLetter = line.replace(/^\s*([a-zA-Z]).*$/, "$1");
 				 stack.push(newLetter.charCodeAt(0));
 				 lineNo++;
 			},
@@ -291,14 +291,14 @@ function run (code, input){
 		}
 		
 		if (commands[letter]() == false){
-			document.getElementById("output").innerHTML += output;
+			document.getElementById("output").innerHTML = output;
 			return;
 		}
 		
 		console.log("Current stack: "+stack);
 	}
 	
-	document.getElementById("output").innerHTML += output;
+	document.getElementById("output").innerHTML = output;
 }
 </script>
 
