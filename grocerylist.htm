@@ -107,7 +107,7 @@ function run (code, input){
 				stack.push(Math.floor(y / x));
 			},
 			"e": function(){ 	
-				if (stack[stack.length-1] != 0){ // repeat the loop if nonzero
+				if (stack.length == 0 || stack[stack.length-1] != 0){ // repeat the loop if nonzero
 					var loopCounter = 0; // count the number of nested loops entered while searching
 					for (var i=lineNo-1; i>1; i--){
 						if (codelines[i].match(/^\s*[a-zA-Z]/)){
@@ -177,7 +177,7 @@ function run (code, input){
 				stack = [];
 			},
 			"l": function(){ 
-				if (stack[stack.length-1] == 0){ // skip the loop if zero
+				if (stack.length == 0 || stack[stack.length-1] == 0){ // skip the loop if zero
 					var loopCounter = 0; // count the number of nested loops entered while searching
 					for (var i=lineNo+1; i<codelines.length; i++){
 						if (codelines[i].match(/^\s*[a-zA-Z]/)){
@@ -262,9 +262,8 @@ function run (code, input){
 				stack.unshift(stack.pop());
 			},
 			"v": function(){ 
-				 var newLetter = line.replace(/^\s*([a-zA-Z]).*$/, "$1");
+				 var newLetter = codelines[++lineNo].replace(/^\s*([a-zA-Z]).*$/, "$1");
 				 stack.push(newLetter.charCodeAt(0));
-				 lineNo++;
 			},
 			"w": function(){  
 				stack.push(100);
