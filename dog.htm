@@ -106,7 +106,7 @@ function run (code, input){
 				// bark "string"
 				if (line.match(/^\s*bark\s*".*"\s*$/)){
 					outString = line.replace(/^\s*bark\s+"(.*)"/, "$1");
-					outString = outString.replace(/\\n/g, "<br>");
+					outString = outString.replace(/\\n/g, String.fromCharCode(10));
 					output += outString;
 				} else {
 					document.getElementById("output").innerHTML = "Error: Invalid 'bark' command on line "+lineNo;
