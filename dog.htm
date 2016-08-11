@@ -1,0 +1,291 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+textarea {
+  width: 100%;
+  min-height: 100px;
+}
+pre {
+  border: 1px solid black;
+  width: 100%;
+  min-height: 100px;
+}
+</style>
+<title>DOG Online Interpreter</title>
+</head>
+
+<body>
+<a href="index.html">« Back to main</a>
+
+<h2>DOG Online Interpreter</h2>
+
+<p><a href="http://esolangs.org/wiki/DOG">DOG Esolangs page</a></p>
+
+Code:
+<textarea id="code"></textarea>
+Input:
+<textarea id="input"></textarea>
+<button type="button" id="runBtn">
+Run
+</button><br>
+Output:
+<textarea id="output" readonly></textarea>
+
+<script>
+document.getElementById("runBtn").onclick = function(){
+	run(document.getElementById("code").value, document.getElementById("input").value);
+};
+
+function takeFromFloor(floor){
+	var result, rand;
+	if (floor.length == 0) return 0;
+	rand = Math.floor(Math.random()*floor.length);
+	result = floor[rand];
+	floor.splice(rand, 1);
+	return result;
+}
+function addToFloor(floor, newValue){
+	if (newValue != 0) floor.push(newValue);
+	return floor;
+}
+
+function run (code, input){
+	// Initialize the data stores
+	var MAX_STEPS = 1e6; // disallow the program from exceeding a certain number of steps
+	
+	var currentStep = 0;
+	var floor = [];
+	var dishes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	var plates = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	var dog = 0;
+	
+	var labels = {}; // Labels for label/jump statements
+	
+	var output = ""; // string holding the output
+	var codelines = code.split(String.fromCharCode(13)); // array holding each line of code
+	var inputs = input.split(" ").reverse(); // array holding all input values
+	
+	for (var lineNo=0; lineNo<codelines.length; lineNo++){
+		// Parse for labels prior to execution
+		var line = codelines[lineNo];
+		if (line.match(/^\s*label/)){
+			// label label_name
+			if (line.match(/^\s*label\s*\b\w*?\b\s*$/)){
+				x = line.replace(/^\s*label\s*\b(\w*?)\b\s*$/, "$1");
+				labels[x] = lineNo;
+			} else {
+				document.getElementById("output").innerHTML = "Error: Invalid 'label' command on line "+lineNo;
+				return;
+			}
+		}
+	}
+	
+	for (var lineNo=0; lineNo<codelines.length; lineNo++){
+		
+		if (currentStep >= MAX_STEPS){
+			document.getElementById("output").innerHTML = output;
+			document.getElementById("output").innerHTML += "<br><br>Exited: Taking too long...";
+			return;
+		}
+		
+		currentStep++;
+		
+		var line = codelines[lineNo];
+		var executionTimes = 1; // Number of times to run the line
+		if (line.match(/^\s*\d+/)){
+			executionTimes = parseInt(line.replace(/^\s*(\d+)/, "$1"));
+			line = line.replace(/^\s*\d+(.*)$/, "$1");
+		} else if (line.match(/^\s*dish\d/)){
+			executionTimes = dishes[parseInt(line.replace(/^\s*dish(\d)/, "$1"))];
+			line = line.replace(/^\s*dish\d(.*)$/, "$1");
+		} else if (line.match(/^\s*plate\d/)){
+			executionTimes = plates[parseInt(line.replace(/^\s*plate(\d)/, "$1"))]>0?1:0;
+			line = line.replace(/^\s*plate\d(.*)$/, "$1");
+		}
+		
+		for (var i=0; i<executionTimes; i++){
+			var outString, x, y;
+			if (line.match(/^\s*bark/)){
+				// bark "string"
+				if (line.match(/^\s*bark\s*".*"\s*$/)){
+					outString = line.replace(/^\s*bark\s+"(.*)"/, "$1");
+					outString = outString.replace(/\\n/g, "<br>");
+					output += outString;
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'bark' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*fetch/)){
+				// fetch X
+				if (line.match(/^\s*fetch\s+(\d+|dish\d|plate\d|floor)\s*$/)){
+					x = line.replace(/^\s*fetch\s+(\d+|dish\d|plate\d|floor)\s*$/, "$1");
+					if (x.match(/^\d+$/)){
+						dog += parseInt(x);
+					} else if (x.match(/^dish\d$/)){
+						dog += dishes[parseInt(x.replace(/^dish|(\d)$/, "$1"))];
+					} else if (x.match(/^plate\d$/)){
+						dog += plates[parseInt(x.replace(/^plate|(\d)$/, "$1"))];
+					} else if (x.match(/^floor$/)){
+						y = takeFromFloor(floor);
+						dog += y;
+						addToFloor(floor, y);
+					}
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'fetch' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*eat/)){
+				// eat X
+				if (line.match(/^\s*eat\s+(\d+|dish\d|plate\d|floor)\s*$/)){
+					x = line.replace(/^\s*eat\s+(\d+|dish\d|plate\d|floor)\s*$/, "$1");
+					if (x.match(/^\d+$/)){
+						dog = Math.max(0, dog-parseInt(x));
+					} else if (x.match(/^dish\d$/)){
+						dog = Math.max(0, dog-dishes[parseInt(x.replace(/^dish|(\d)$/, "$1"))]);
+					} else if (x.match(/^plate\d$/)){
+						dog = Math.max(0, dog-plates[parseInt(x.replace(/^plate|(\d)$/, "$1"))]);
+					} else if (x.match(/^floor$/)){
+						y = takeFromFloor(floor);
+						dog = Math.max(0, dog-y);
+						addToFloor(floor, y);
+					}
+				} else {
+					if (line.match(/^\s*eat\s*$/)){
+						console.log ("eating all cookies :(");
+						dog = 0;
+					} else {
+						document.getElementById("output").innerHTML = "Error: Invalid 'eat' command on line "+lineNo;
+						return;
+					}
+				}
+			} else if (line.match(/^\s*pickup/)){
+				// pickup V
+				if (line.match(/^\s*pickup\s+(dish\d|plate\d|floor)\s*$/)){
+					x = line.replace(/^\s*pickup\s+(dish\d|plate\d|floor)\s*$/, "$1");
+					if (x.match(/^dish\d$/)){
+						y = parseInt(x.replace(/^dish|(\d)$/, "$1"));
+						dog += dishes[y];
+						dishes[y] = 0;
+					} else if (x.match(/^plate\d$/)){
+						y = parseInt(x.replace(/^plate|(\d)$/, "$1"));
+						dog += plates[y];
+						plates[y] = 0;
+					} else if (x.match(/^floor$/)){
+						y = takeFromFloor(floor);
+						dog += y;
+					}
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'pickup' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*drop/)){
+				// drop V
+				if (line.match(/^\s*drop\s+(dish\d|plate\d|floor)\s*$/)){
+					var y;
+					x = line.replace(/^\s*drop\s+(dish\d|plate\d|floor)\s*$/, "$1");
+					if (x.match(/^dish\d$/)){
+						y = parseInt(x.replace(/^dish|(\d)$/, "$1"));
+						dishes[y] += dog;
+						dog = 0;
+					} else if (x.match(/^plate\d$/)){
+						y = parseInt(x.replace(/^plate|(\d)$/, "$1"));
+						plates[y] += dog;
+						dog = 0;
+					} else if (x.match(/^floor$/)){
+						addToFloor(floor, dog);
+						dog = 0;
+					}
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'drop' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*clear/)){
+				// clear V
+				if (line.match(/^\s*clear\s+(dish\d|plate\d|floor)\s*$/)){
+					var y;
+					x = line.replace(/^\s*clear\s+(dish\d|plate\d|floor)\s*$/, "$1");
+					if (x.match(/^dish\d$/)){
+						y = parseInt(x.replace(/^dish|(\d)$/, "$1"));
+						dishes[y] = 0;
+					} else if (x.match(/^plate\d$/)){
+						y = parseInt(x.replace(/^plate|(\d)$/, "$1"));
+						plates[y] = 0;
+					} else if (x.match(/^floor$/)){
+						floor = [];
+					}
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'clear' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*show/)){
+				// show
+				if (line.match(/^\s*show\s*$/)){
+					output += dog;
+				} else {
+					document.getElementById("output").innerHTML = "Error: 'show' does not take any arguments. On line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*give/)){
+				// give
+				if (line.match(/^\s*give\s*$/)){
+					output += dog;
+					dog = 0;
+				} else {
+					document.getElementById("output").innerHTML = "Error: 'give' does not take any arguments. On line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*take/)){
+				// take
+				if (line.match(/^\s*take\s*$/)){
+					if (inputs.length == 0){
+						document.getElementById("output").innerHTML = "Error: Tried to 'take' with no input left, on line "+lineNo;
+						return;
+					}
+					dog += Math.max(0, parseInt(inputs.pop()));
+				} else {
+					document.getElementById("output").innerHTML = "Error: 'take' does not take any arguments. On line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*die/)){
+				// die
+				return;
+			} else if (line.match(/^\s*label/)){
+				// A label line
+				// Already dealt with in previous loop so nothing happens here
+			} else if (line.match(/^\s*jump/)){
+				// jump label_name
+				if (line.match(/^\s*jump\s*\b\w*?\b\s*$/)){
+					x = line.replace(/^\s*jump\s*\b(\w*?)\b\s*$/, "$1");
+					if (!labels[x]){
+						document.getElementById("output").innerHTML = "Error: On line "+lineNo+": jumping to nonexistant label "+x;
+						return;
+					} else {
+						lineNo = labels[x]; // -1 so because lineNo will increment before executing the line again
+					}
+				} else {
+					document.getElementById("output").innerHTML = "Error: Invalid 'label' command on line "+lineNo;
+					return;
+				}
+			} else if (line.match(/^\s*bo+rk\s*$/)){
+				// Just for laughs :D
+				document.getElementById("output").innerHTML = "Error: Line "+lineNo+" are doing me a frighten";
+				return;
+			} else if (line.match(/^\s*$/)){
+				// nothing on the line
+				// will do nothing, but is valid syntax (won't throw an error)
+			} else {
+				// invalid syntax
+				document.getElementById("output").innerHTML = "Error: Unrecognized command on line "+lineNo;
+					return;
+			}
+		}
+	}
+	
+	document.getElementById("output").innerHTML = output;
+}
+</script>
+
+</body>
+</html>
