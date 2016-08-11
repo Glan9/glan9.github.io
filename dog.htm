@@ -60,6 +60,7 @@ function run (code, input){
 	
 	var output = ""; // string holding the output
 	var codelines = code.split(String.fromCharCode(10)); // array holding each line of code
+	console.log(codelines);
 	var inputs = input.split(" ").reverse(); // array holding all input values
 	
 	for (var lineNo=0; lineNo<codelines.length; lineNo++){
