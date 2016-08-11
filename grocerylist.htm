@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+textarea {
+  width: 100%;
+  min-height: 100px;
+}
+pre {
+  border: 1px solid black;
+  width: 100%;
+  min-height: 100px;
+}
+</style>
+<title>Grocery List Online Interpreter</title>
+</head>
+
+<body>
+<a href="index.html">« Back to main</a>
+
+<h2>Grocery List Online Interpreter</h2>
+
+<p><a href="http://esolangs.org/wiki/Grocery_List">Grocery List Esolangs page</a></p>
+
+Code:
+<textarea id="code"></textarea>
+Input:
+<textarea id="input"></textarea>
+<button type="button" id="runBtn">
+Run
+</button><br>
+Output:
+<textarea id="output" readonly></textarea>
+
+<script>
+document.getElementById("runBtn").onclick = function(){
+	run(document.getElementById("code").value, document.getElementById("input").value);
+};
+
+function run (code, input){
+	// Execution-related variables
+	var MAX_STEPS = 1e6; // disallow the program from exceeding a certain number of steps
+	var currentStep = 0;
+	var output = ""; // string holding the output
+	input = input.split("").reverse();
+	var codelines = code.split(String.fromCharCode(13)); // array holding each line of code
+	var loopstack = []; // keeps track of loops, matching e's and l's
+	
+	// Data storing variables
+	var stack = [];
+	
+	
+	if (codelines.length < 2 || !codelines[0].match(/^\w/) || !codelines[1].match(/^\s*$/)){
+		document.getElementById("output").innerHTML += "Error: Program must start with a store name and an empty line, before the rest of the code.";
+		return;
+	}
+	
+	for (var lineNo=2; lineNo<codelines.length; lineNo++){
+				
+		var line = codelines[lineNo];
+		var letter;
+		var x, y;
+		
+		currentStep++;
+		if (currentStep >= MAX_STEPS){
+			document.getElementById("output").innerHTML = output + "\nExiting, taking too long...";
+			return;
+		}
+		
+		console.log("Current line: "+line);
+		
+		if (!line.match(/^\s*[a-zA-Z]/)){
+			document.getElementById("output").innerHTML += "Error on line "+lineNo+": Item doesn't start with a letter.";
+			return;
+		}
+		
+		letter = line.replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase();
+		
+		var commands = {
+			"a": function(){ 
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'a' with less than 2 items in stack";
+					return false;
+				}
+				stack.push(stack.pop() + stack.pop());
+			},
+			"b": function(){ 
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'b' with no items in stack";
+					return false;
+				}
+				stack.push(stack.shift());
+			},
+			"c": function(){ 	
+				x = stack.pop();
+				stack.push(x);
+				stack.push(x);
+			},
+			"d": function(){ 
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'd' with less than 2 items in stack";
+					return false;
+				}
+				x = stack.pop();
+				y = stack.pop();
+				stack.push(Math.floor(y / x));
+			},
+			"e": function(){ 	
+				if (stack[stack.length-1] != 0){ // repeat the loop if nonzero
+					var loopCounter = 0; // count the number of nested loops entered while searching
+					for (var i=lineNo-1; i>1; i--){
+						if (codelines[i].match(/^\s*[a-zA-Z]/)){
+							if (codelines[i].replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase() == "e"){
+								// if you find an 'e', you have entered one nested loop
+								loopCounter++;
+							} else if (codelines[i].replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase() == "l"){
+								// if you find an 'l', that is the beginning of the loop
+								if (loopCounter == 0){
+									// if the loop counter is 0, that 'l' matches this 'e'
+									lineNo = i;
+									return true;
+								} else {
+									// otherwise the 'l' matches one of the 'e's you found along the way
+									loopCounter--;
+								}
+							}
+						}
+					}
+					// if we reach the first line without finding the matching 'l', then there is a mismatched loop problem
+					document.getElementById("output").innerHTML += "Error, mismatched loop: 'e' on line "+lineNo+" couldn't find matching 'l'";
+					return false;
+				}
+			},
+			"f": function(){  
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'f' with less than 2 items in stack";
+					return false;
+				}
+				x = stack.pop();
+				y = stack.pop();
+				stack.push(x);
+				stack.push(y);
+			},
+			"g": function(){  
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'g' with less than 2 items in stack";
+					return false;
+				}
+				x = stack.pop();
+				y = stack.pop();
+				stack.push(x>y?1:0);
+			},
+			"h": function(){ 
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'h' with no items in stack";
+					return false;
+				}
+				x = (stack.pop()%26)+97;
+				return commands[String.fromCharCode(x)]();
+			},
+			"i": function(){  
+				if (input.length < 1){
+					stack.push(0);
+				} else {
+					stack.push(input.pop().charCodeAt(0));
+				}
+			},
+			"j": function(){
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'j' with no items in stack";
+					return false;
+				}
+				lineNo += stack.pop()-1;
+			},
+			"k": function(){  
+				stack = [];
+			},
+			"l": function(){ 
+				if (stack[stack.length-1] == 0){ // skip the loop if zero
+					var loopCounter = 0; // count the number of nested loops entered while searching
+					for (var i=lineNo+1; i<codelines.length; i++){
+						if (codelines[i].match(/^\s*[a-zA-Z]/)){
+							if (codelines[i].replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase() == "l"){
+								// if you find an 'e', you have entered one nested loop
+								loopCounter++;
+							} else if (codelines[i].replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase() == "e"){
+								// if you find an 'l', that is the beginning of the loop
+								if (loopCounter == 0){
+									// if the loop counter is 0, that 'l' matches this 'e'
+									lineNo = i;
+									return true;
+								} else {
+									// otherwise the 'l' matches one of the 'e's you found along the way
+									loopCounter--;
+								}
+							}
+						}
+					}
+					// if we reach the last line without finding the matching 'e', then there is a mismatched loop problem
+					document.getElementById("output").innerHTML += "Error, mismatched loop: 'l' on line "+lineNo+" couldn't find matching 'e'";
+					return false;
+				}
+			},
+			"m": function(){  
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'm' with less than 2 items in stack";
+					return false;
+				}
+				stack.push(stack.pop() * stack.pop());
+			},
+			"n": function(){  
+				x = line.replace(/^\s*(\b.*\b)\s*$/, "$1").length;
+				stack.push(x);
+			},
+			"o": function(){ 
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'o' with no items in stack";
+					return false;
+				}
+				x = stack.pop();
+				output += x;
+			},
+			"p": function(){  
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'p' with no items in stack";
+					return false;
+				}
+				x = stack.pop();
+				if (x == 0) return false;
+				output += String.fromCharCode(x);
+			},
+			"q": function(){  
+				// does nothing
+			},
+			"r": function(){  
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'r' with less than 2 items in stack";
+					return false;
+				}
+				x = stack.pop();
+				y = stack.pop();
+				stack.push(y % x);
+			},
+			"s": function(){ 
+				if (stack.length < 2){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 's' with less than 2 items in stack";
+					return false;
+				}
+				x = stack.pop();
+				y = stack.pop();
+				stack.push(y - x); 
+			},
+			"t": function(){ 
+				return false; 
+			},
+			"u": function(){  
+				if (stack.length < 1){
+					output += "Error on line "+lineNo+": 'u' with no items in stack";
+					return false;
+				}
+				stack.unshift(stack.pop());
+			},
+			"v": function(){ 
+				 var newLetter = line.replace(/^\s*([a-zA-Z]).*$/, "$1").toLowerCase();
+				 stack.push(newLetter.charCodeAt(0));
+				 lineNo++;
+			},
+			"w": function(){  
+				stack.push(100);
+			},
+			"x": function(){  
+				stack.pop();
+			},
+			"y": function(){  
+				x = line.replace(/^\s*(\b.*\b)\s*$/, "$1").length;
+				if (stack.length <= x){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'y' with not enough items in stack";
+					return false;
+				}
+				stack.splice(-x, 1);
+			},
+			"z": function(){  
+				if (stack.length < 1){
+					document.getElementById("output").innerHTML += "Error on line "+lineNo+": 'x' with no items in stack";
+					return false;
+				}
+				x = stack.pop();
+				stack.push(x==0?1:0);
+			}
+		}
+		
+		if (commands[letter]() == false){
+			document.getElementById("output").innerHTML += output;
+			return;
+		}
+		
+		console.log("Current stack: "+stack);
+	}
+	
+	document.getElementById("output").innerHTML += output;
+}
+</script>
+
+</body>
+</html>
