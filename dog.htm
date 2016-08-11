@@ -59,7 +59,7 @@ function run (code, input){
 	var labels = {}; // Labels for label/jump statements
 	
 	var output = ""; // string holding the output
-	var codelines = code.split(String.fromCharCode(13)); // array holding each line of code
+	var codelines = code.split(String.fromCharCode(10)); // array holding each line of code
 	var inputs = input.split(" ").reverse(); // array holding all input values
 	
 	for (var lineNo=0; lineNo<codelines.length; lineNo++){
